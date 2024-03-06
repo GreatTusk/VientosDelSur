@@ -1,0 +1,154 @@
+.table-view {
+    -fx-background-color: transparent;
+}
+.table-view .column-header-background .filler {
+    -fx-background-color: transparent;
+}
+.table-view .corner {
+    -fx-background-color: transparent;
+}
+.table-view .column-header-background{
+    -fx-background-color: linear-gradient(to bottom, #1dbbdd44, #93f9b944);
+    -fx-background-radius: 7px 7px 0px 0px;
+    -fx-background-insets: 0 11px 0 0;
+    -fx-padding: 0 0 5px 0;
+}
+.table-view .column-header {
+    -fx-background-color: transparent;
+}
+.table-view .table-cell{
+    -fx-border-color: transparent;
+    -fx-padding: 2 0 2 10px;
+}
+.table-row-cell:hover {
+    -fx-background-color: #93f9b911;
+    -fx-text-background-color: red;
+}
+.table-row-cell:odd{
+    -fx-background-color: #93f9b911;
+    -fx-background-insets: 0, 0 0 1 0;
+    -fx-padding: 0.0em;
+}
+.table-row-cell:even{
+    -fx-background-color: #1dbbdd11;
+    -fx-background-insets: 0, 0 0 1 0;
+    -fx-padding: 0.0em;
+}
+.table-row-cell:selected{
+    -fx-background-color: #93f9b911;
+    -fx-text-background-color: red;
+}
+.table-row-cell{
+    -fx-font-family: Roboto;
+    -fx-font-size: 15px;
+}
+.table-view .virtual-flow .scroll-bar:vertical,
+.table-view .virtual-flow .scroll-bar:vertical .track,
+.table-view .virtual-flow .scroll-bar:vertical .track-background,
+.table-view .virtual-flow .scroll-bar:horizontal,
+.table-view .virtual-flow .scroll-bar:horizontal .track,
+.table-view .virtual-flow .scroll-bar:horizontal .track-background {
+    -fx-background-color: transparent;
+}
+.table-view .virtual-flow .scroll-bar .increment-button,
+.table-view .virtual-flow .scroll-bar .decrement-button {
+    -fx-opacity: 0;
+    -fx-padding: 2;
+}
+.table-view .virtual-flow .scroll-bar:vertical .thumb{
+    -fx-background-color:  linear-gradient(to bottom, #1dbbdd44, #93f9b944);
+}
+.table-view .virtual-flow .scroll-bar:horizontal .thumb {
+    -fx-background-color:  linear-gradient(to right, #1dbbdd44, #93f9b944);
+}
+
+/* Styling for Buttons */
+.button {
+    -fx-font-family: "Roboto";
+    -fx-font-size: 16;
+    -fx-background-color: #7C8B56;
+    /* Red background color */
+    -fx-text-fill: #ffffff;
+    /* White text color */
+}
+
+.button:hover {
+    -fx-background-color: #a9be77;
+    /* New background color on hover */
+}
+
+/* Styling for Labels */
+.label {
+    -fx-font-family: "Roboto";
+    -fx-font-size: 18;
+    -fx-text-fill: #000000;
+    /* Dark gray text color */
+}
+
+/* Styling for ChoiceBox */
+.combo-box {
+    -fx-background-color: #B6CC7E;
+    /* Red background color */
+}
+
+.combo-box .label {
+    -fx-font-family: "Roboto";
+    -fx-font-size: 14;
+    -fx-text-fill: #ffffff;
+    /* White text color for label */
+}
+
+.combo-box-popup .menu-item {
+    -fx-font-family: "Roboto";
+    -fx-font-size: 14;
+    -fx-text-fill: #333333;
+    /* Dark gray text color for choice box options */
+    -fx-background-color: #B6CC7E;
+    /* Orange background color for options */
+}
+
+.combo-box-popup .menu-item:hover,
+.combo-box-popup .menu-item:pressed {
+    -fx-background-color: #7C8B56;
+    /* Slightly darker red background color on hover or press */
+}
+
+
+.context-menu {
+    -fx-background-color: #B6CC7E;
+}
+
+/* Sample CSS for styled-alert class */
+.styled-alert {
+    -fx-background-color: #B6CC7E;
+    /* Red background color */
+    -fx-font-family: "Roboto";
+    -fx-text-fill: #ffffff;
+    /* White text color */
+    -fx-padding: 10;
+    /* Add padding to the label */
+}
+
+/* Sample CSS for styled-alert class */
+.styled-alert .label {
+    -fx-background-color: #B6CC7E;
+    /* Red background color */
+    -fx-font-family: "Roboto";
+    -fx-font-size: 18;
+    -fx-text-fill: #ffffff;
+    /* White text color */
+    -fx-padding: 10;
+    /* Add padding to the label */
+}
+
+/* Sample CSS for styled-alert class */
+.styled-alert .context-menu {
+    -fx-background-color: #B6CC7E;
+    /* Red background color */
+    -fx-font-family: "Roboto";
+    -fx-font-size: 18;
+    -fx-text-fill: #ffffff;
+    /* White text color */
+    -fx-padding: 10;
+    /* Add padding to the label */
+}

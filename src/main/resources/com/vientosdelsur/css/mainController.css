@@ -1,0 +1,217 @@
+/* Styling for Labels */
+.label {
+    -fx-font-family: "Roboto";
+    -fx-font-size: 18;
+    -fx-text-fill: #ffffff;
+    /* Dark gray text color */
+}
+
+.grid-pane {
+    -fx-background-color: #7C8B56;
+}
+
+#habitacionesLabel{
+    -fx-background-color: #7C8B56;
+}
+
+.check-box {
+    -fx-font-family: "Roboto";
+    -fx-font-size: 18;
+    -fx-text-fill: #ffffff;
+}
+
+.housekeeper-label {
+    -fx-background-color: #7C8B56;
+    -fx-padding: 10;
+    -fx-border-radius: 10px;
+    -fx-border-color: #ffffff;
+    -fx-background-radius: 10px;
+    -fx-background-insets: 5;
+    -fx-border-insets: 5;
+}
+
+.room-checkbox {
+    -fx-border-radius: 3px;
+    -fx-border-color: #ffffff;
+    -fx-background-radius: 2px;
+    -fx-pref-width: 118px;
+    -fx-alignment: center;
+
+}
+
+
+/* Styling for Buttons */
+.button {
+    -fx-font-family: "Roboto";
+    -fx-font-size: 16;
+    -fx-background-color: #7C8B56;
+    /* Red background color */
+    -fx-text-fill: #ffffff;
+    /* White text color */
+}
+
+.button:hover {
+    -fx-background-color: #a9be77;
+    /* New background color on hover */
+}
+
+/* Styling for BorderPane */
+.border-pane {
+    -fx-background-color: #ffffff;
+    /* White background color */
+}
+
+/* Styling for center, top, left, right, and bottom content of BorderPane */
+.border-pane .center,
+.border-pane .top,
+.border-pane .left,
+.border-pane .right {
+    -fx-background-color: #ecf0f1;
+    /* Light gray background color */
+    -fx-padding: 10;
+}
+
+
+
+/* Styling for all vertical scrollbars */
+.scroll-bar:vertical {
+    -fx-background-color: #f39c12; /* Orange background color */
+}
+
+/* Styling for all vertical thumbs in scrollbars */
+.scroll-bar:vertical .thumb {
+    -fx-background-color: #7C8B56; /* Darker orange color for the thumb */
+}
+
+/* Styling for all vertical tracks in scrollbars */
+.scroll-bar:vertical .track {
+    -fx-background-color: #ecf0f1; /* Light gray background color for the track */
+}
+
+/* Styling for all vertical increment and decrement buttons in scrollbars */
+.scroll-bar:vertical .increment-button,
+.scroll-bar:vertical .decrement-button {
+    -fx-background-color: #ffffff; /* White background color for the buttons */
+    -fx-background-insets: 0, 1, 2;
+    -fx-background-radius: 0;
+}
+
+/* Styling for all vertical increment and decrement arrows in scrollbars */
+.scroll-bar:vertical .increment-arrow,
+.scroll-bar:vertical .decrement-arrow {
+    -fx-background-color: #333333; /* Dark gray color for the arrows */
+}
+
+/* Styling for all vertical increment and decrement buttons on hover in scrollbars */
+.scroll-bar:vertical .increment-button:hover,
+.scroll-bar:vertical .decrement-button:hover {
+    -fx-background-color: #B6CC7E; /* Orange background color on hover */
+}
+
+
+/* Styling for MenuBar */
+.menu-bar {
+    -fx-background-color: #7C8B56;
+    /* Red background color */
+}
+
+/* Styling for labels, checkboxes, and menu items in menu bar and context menu */
+.menu-bar .label,
+.menu-bar .menu-item,
+.context-menu .menu-item .label {
+    -fx-font-family: "Roboto";
+    -fx-font-size: 14;
+    -fx-text-fill: #ffffff;
+    /* White text color for label, checkboxes, and menu items */
+}
+
+.check-box .label {
+    -fx-font-family: "Roboto";
+    -fx-font-size: 14;
+    -fx-text-fill: #ffffff;
+}
+
+
+.menu-bar .menu-item:hover,
+.menu-bar .menu-item:pressed {
+    -fx-background-color: #a9be77;
+    /* Slightly darker red background color on hover or press */
+}
+
+.menu-bar .menu :hover {
+    -fx-background-color: #97a86a;
+    /* New background color on hover */
+}
+
+.menu-bar .menu {
+    -fx-background-color: transparent;
+    /* Set the menu background color */
+}
+
+/* Styling for ChoiceBox */
+.choice-box {
+    -fx-background-color: #B6CC7E;
+    /* Red background color */
+}
+
+.choice-box .label {
+    -fx-font-family: "Roboto";
+    -fx-font-size: 14;
+    -fx-text-fill: #ffffff;
+    /* White text color for label */
+}
+
+.choice-box-popup .menu-item {
+    -fx-font-family: "Roboto";
+    -fx-font-size: 14;
+    -fx-text-fill: #333333;
+    /* Dark gray text color for choice box options */
+    -fx-background-color: #B6CC7E;
+    /* Orange background color for options */
+}
+
+.choice-box-popup .menu-item:hover,
+.choice-box-popup .menu-item:pressed {
+    -fx-background-color: #7C8B56;
+    /* Slightly darker red background color on hover or press */
+}
+
+
+.context-menu {
+    -fx-background-color: #B6CC7E;
+}
+
+/* Sample CSS for styled-alert class */
+.styled-alert {
+    -fx-background-color: #B6CC7E;
+    /* Red background color */
+    -fx-font-family: "Roboto";
+    -fx-text-fill: #ffffff;
+    /* White text color */
+    -fx-padding: 10;
+    /* Add padding to the label */
+}
+
+/* Sample CSS for styled-alert class */
+.styled-alert .label {
+    -fx-background-color: #B6CC7E;
+    /* Red background color */
+    -fx-font-family: "Roboto";
+    -fx-font-size: 18;
+    -fx-text-fill: #ffffff;
+    /* White text color */
+    -fx-padding: 10;
+    /* Add padding to the label */
+}
+
+/* Sample CSS for styled-alert class */
+.styled-alert .context-menu {
+    -fx-background-color: #B6CC7E;
+    /* Red background color */
+    -fx-font-family: "Roboto";
+    -fx-font-size: 18;
+    -fx-text-fill: #ffffff;
+    /* White text color */
+    -fx-padding: 10;
+    /* Add padding to the label */
+}
