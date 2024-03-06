@@ -1,0 +1,32 @@
+[
+  {
+    "shift": "PART_TIME",
+    "name": "Macarena",
+    "color": "0x006400ff",
+    "preferredFloor": ""
+  },
+  {
+    "shift": "PART_TIME",
+    "name": "Flor",
+    "color": "0x009600ff",
+    "preferredFloor": ""
+  },
+  {
+    "shift": "FULL_TIME",
+    "name": "Graciela",
+    "color": "0x717a00ff",
+    "preferredFloor": "2"
+  },
+  {
+    "shift": "FULL_TIME",
+    "name": "Bárbara",
+    "color": "0x94a400ff",
+    "preferredFloor": "3"
+  },
+  {
+    "shift": "FULL_TIME",
+    "name": "Yanira",
+    "color": "0x003200ff",
+    "preferredFloor": "4"
+  }
+]
