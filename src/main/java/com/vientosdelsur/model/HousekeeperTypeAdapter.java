@@ -42,21 +42,4 @@ public class HousekeeperTypeAdapter extends TypeAdapter<Housekeeper> {
 
     }
 
-    private static Color parseColor(String colorString) {
-        if (colorString == null || colorString.length() != 10 || !colorString.startsWith("0x")) {
-            throw new IllegalArgumentException("Invalid color string format");
-        }
-
-        // Extract individual color components
-        int red = Integer.parseInt(colorString.substring(2, 4), 16);
-        int green = Integer.parseInt(colorString.substring(4, 6), 16);
-        int blue = Integer.parseInt(colorString.substring(6, 8), 16);
-        int alpha = Integer.parseInt(colorString.substring(8), 16);
-
-        // Normalize alpha value
-        double opacity = alpha / 255.0;
-
-        // Create JavaFX Color object
-        return Color.rgb(red, green, blue, opacity);
-    }
 }

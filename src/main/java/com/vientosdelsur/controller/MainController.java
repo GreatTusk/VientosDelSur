@@ -18,6 +18,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.geometry.HPos;
 import javafx.geometry.VPos;
+import javafx.scene.control.Alert;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.SplitPane;
@@ -27,12 +28,13 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
-import javafx.scene.paint.Paint;
 import javafx.scene.shape.Rectangle;
 
 import java.io.IOException;
 import java.net.URL;
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class MainController implements Initializable {
 
@@ -46,7 +48,6 @@ public class MainController implements Initializable {
     private BorderPane root, staffPane;
     private ArrayList<Room> rooms;
     private ObservableList<Housekeeper> housekeepers;
-    private ObservableList<Housekeeper> selectedHousekeepers;
     private int indexRoomQuota = -1;
     private int employeeIndex = -1;
 
@@ -115,12 +116,8 @@ public class MainController implements Initializable {
      */
     private void displayRoomMatrix() {
         rooms = Database.createRoomArray();
-        for (var constraint : roomsPane.getColumnConstraints()) {
-            constraint.setHalignment(HPos.CENTER);
-        }
-        for (var constraint : roomsPane.getRowConstraints()) {
-            constraint.setValignment(VPos.CENTER);
-        }
+        roomsPane.getColumnConstraints().forEach(columnConstraints -> columnConstraints.setHalignment(HPos.CENTER));
+        roomsPane.getRowConstraints().forEach(rowConstraints -> rowConstraints.setValignment(VPos.CENTER));
         populateRoomsPane(createRoomMatrix(rooms));
     }
 
@@ -134,12 +131,12 @@ public class MainController implements Initializable {
     private HashMap<Integer, ArrayList<Room>> createRoomMatrix(ArrayList<Room> rooms) {
         HashMap<Integer, ArrayList<Room>> roomMatrix = new HashMap<>();
 
-        // Group rooms by floor
-        for (Room room : rooms) {
+        rooms.forEach(room -> {
             int floor = Integer.parseInt(String.valueOf(room.id()).substring(0, 1));
             roomMatrix.putIfAbsent(floor, new ArrayList<>());
             roomMatrix.get(floor).add(room);
-        }
+        });
+
         return roomMatrix;
     }
 
@@ -149,7 +146,17 @@ public class MainController implements Initializable {
      * This method is called when the button "Generar distribuciones" is pressed
      */
     public void distributeWork() {
-        assignWork(getOccupiedRooms());
+        ObservableList<Housekeeper> selectedHousekeepers = processSelectedHousekeepers();
+        if (!selectedHousekeepers.isEmpty()) {
+            assignWork(getOccupiedRooms(), selectedHousekeepers);
+        } else {
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle("Asignación de trabajo");
+            alert.setHeaderText(null);
+            alert.setContentText("Por favor, seleccione al menos una mucama antes de continuar.");
+            alert.showAndWait();
+        }
+
     }
 
     /**
@@ -184,12 +191,13 @@ public class MainController implements Initializable {
      */
     private Room matchRoom(String id) {
 
+        int roomId = Integer.parseInt(id);
+
         return rooms
                 .stream()
-                .filter(room -> room.id() == Integer.parseInt(id))
+                .filter(room -> room.id() == roomId)
                 .findFirst()
                 .orElse(null);
-
     }
 
     /**
@@ -201,29 +209,31 @@ public class MainController implements Initializable {
     private ArrayList<Room> getOccupiedRooms() {
 
         ArrayList<Room> roomList = new ArrayList<>();
+
         /*
         While a stream could potentially be utilized, it would not allow us to harness the benefits
         of the Pattern Matching for instanceof feature introduced in Java 16, which facilitates the
         extraction of whether the checkbox is selected (and obtaining its text later).
         */
-        for (var room : roomsPane.getChildren()) {
+
+        roomsPane.getChildren().forEach(room -> {
             if (room instanceof CheckBox checkBox && checkBox.isSelected()) {
                 String id = checkBox.getText().split(" ")[0];
                 roomList.add(matchRoom(id));
             }
-        }
+        });
+
+
         return roomList;
     }
 
     private Housekeeper matchHousekeeper(String color, ObservableList<Housekeeper> housekeepers) {
 
-        for (var housekeeper : housekeepers) {
-            if (housekeeper.preferredColor().equals(color)) {
-                return housekeeper;
-            }
-        }
-
-        return null;
+        return housekeepers
+                .stream()
+                .filter(housekeeper -> housekeeper.preferredColor().equals(color))
+                .findAny()
+                .orElseThrow();
     }
 
     /**
@@ -233,40 +243,42 @@ public class MainController implements Initializable {
      *
      * @param selectedRooms the array of rooms the user selected
      */
-    public void assignWork(ArrayList<Room> selectedRooms) {
+    public void assignWork(ArrayList<Room> selectedRooms, ObservableList<Housekeeper> selectedHousekeepers) {
 
         resetRoomColors();
         // Distribution by shift
-
-        processSelectedHousekeepers();
-        var workloadPartFull = distributeWorkload(selectedRooms);
+        long start = System.nanoTime();
+        var workloadPartFull = distributeWorkload(selectedRooms, selectedHousekeepers);
         ArrayList<ArrayList<Room>> arrayLists = arrangeRooms(selectedRooms, selectedHousekeepers, workloadPartFull);
+        long end = System.nanoTime();
+        long elapsedTime = end - start;
+        double seconds = (double) elapsedTime / 1_000_000_000.0;
+        System.out.println("Time elapsed: " + seconds + " seconds");
         int housekeeperArraySeparatorIndex = getShiftSeparatorIndex(selectedHousekeepers);
 
         Platform.runLater(() -> {
             paintLabels(getPartTimeRooms(arrayLists, housekeeperArraySeparatorIndex),
-                    getPartTimeHouseKeepers(housekeeperArraySeparatorIndex));
+                    getPartTimeHouseKeepers(housekeeperArraySeparatorIndex, selectedHousekeepers));
             paintLabels(getFullTimeRooms(arrayLists, housekeeperArraySeparatorIndex),
-                    getFullTimeHousekeepers(arrayLists, housekeeperArraySeparatorIndex));
+                    getFullTimeHousekeepers(arrayLists, housekeeperArraySeparatorIndex, selectedHousekeepers));
         });
 
     }
 
-    private void processSelectedHousekeepers() {
+    private ObservableList<Housekeeper> processSelectedHousekeepers() {
         ArrayList<Housekeeper> selectedList = new ArrayList<>();
 
-        for (var node : employeesVBox.getChildren()) {
+        employeesVBox.getChildren().forEach(node -> {
             if (node instanceof CheckBox checkBox && checkBox.isSelected()) {
                 var label = (Label) checkBox.getGraphic();
                 var rectangle = (Rectangle) label.getGraphic();
-                Paint fill = rectangle.getFill();
-                var color = (Color) fill;
+                var color = (Color) rectangle.getFill();
                 String colorToString = color.toString();
                 selectedList.add(matchHousekeeper(colorToString, housekeepers));
             }
-        }
+        });
 
-        selectedHousekeepers = FXCollections.observableList(selectedList);
+        return FXCollections.observableList(selectedList);
     }
 
     /**
@@ -275,10 +287,10 @@ public class MainController implements Initializable {
      * @param selectedRooms the rooms to work with
      * @param isTrue        just here to overload assignWork
      */
-    public ArrayList<ArrayList<Room>> assignWork(ArrayList<Room> selectedRooms, boolean isTrue) {
+    public ArrayList<ArrayList<Room>> assignWork(ArrayList<Room> selectedRooms, ObservableList<Housekeeper> selectedHousekeepers, boolean isTrue) {
         if (isTrue) {
             // Distribution of shift
-            var workloadPartFull = distributeWorkload(selectedRooms);
+            var workloadPartFull = distributeWorkload(selectedRooms, selectedHousekeepers);
             return arrangeRooms(selectedRooms, housekeepers, workloadPartFull);
         }
         return null;
@@ -289,14 +301,14 @@ public class MainController implements Initializable {
      * Iterates through each checkbox in the gridPane and sets its background color to null.
      */
     private void resetRoomColors() {
-        for (var room : roomsPane.getChildren()) {
-            if (room instanceof CheckBox checkBox) {
-                if (!checkBox.getStyle().isBlank()) {
-                    checkBox.setStyle("-fx-background-color: null;");
-                }
 
-            }
-        }
+        roomsPane
+                .getChildren()
+                .stream()
+                .filter(node -> node instanceof CheckBox)
+                .filter(checkbox -> checkbox.getStyle().isBlank())
+                .forEach(checkbox -> checkbox.setStyle("-fx-background-color: null;"));
+
     }
 
     /**
@@ -329,7 +341,7 @@ public class MainController implements Initializable {
      * @param housekeeperArraySeparatorIndex the index that separates full-time and part-time housekeepers.
      * @return a List of part-time housekeepers.
      */
-    private List<Housekeeper> getPartTimeHouseKeepers(int housekeeperArraySeparatorIndex) {
+    private List<Housekeeper> getPartTimeHouseKeepers(int housekeeperArraySeparatorIndex, ObservableList<Housekeeper> selectedHousekeepers) {
         return selectedHousekeepers.subList(0, housekeeperArraySeparatorIndex);
     }
 
@@ -339,7 +351,7 @@ public class MainController implements Initializable {
      * @param housekeeperArraySeparatorIndex the index that separates full-time and part-time housekeepers.
      * @return a List of full-time housekeepers.
      */
-    private List<Housekeeper> getFullTimeHousekeepers(ArrayList<ArrayList<Room>> arrayLists, int housekeeperArraySeparatorIndex) {
+    private List<Housekeeper> getFullTimeHousekeepers(ArrayList<ArrayList<Room>> arrayLists, int housekeeperArraySeparatorIndex, ObservableList<Housekeeper> selectedHousekeepers) {
         return selectedHousekeepers.subList(housekeeperArraySeparatorIndex, arrayLists.size());
     }
 
@@ -352,7 +364,7 @@ public class MainController implements Initializable {
      * @return the index where the previous Shift is different from the current one
      */
     private int getShiftSeparatorIndex(ObservableList<Housekeeper> housekeepers) {
-        Shift currentShift = null; // Initialize with null
+        Shift currentShift; // Initialize with null
         Shift previousShift = null; // Initialize with null
 
         for (int i = 0; i < housekeepers.size(); i++) {
@@ -379,27 +391,26 @@ public class MainController implements Initializable {
      * each housekeeper.
      * If assigning two rooms could satisfy one remaining workload, and it is appropriate to do so, it is done.
      *
-     * @param selectedRooms       the rooms we have to work with
-     * @param workloadPerEmployee the shift quota that should be satisfied for each housekeeper
-     * @param maidList            the list of housekeepers
+     * @param selectedRooms        the rooms we have to work with
+     * @param workloadPerEmployee  the shift quota that should be satisfied for each housekeeper
+     * @param selectedHousekeepers the list of housekeepers
      */
-    public ArrayList<ArrayList<Room>> arrangeRooms(ArrayList<Room> selectedRooms, ObservableList<Housekeeper> maidList,
+    public ArrayList<ArrayList<Room>> arrangeRooms(ArrayList<Room> selectedRooms, ObservableList<Housekeeper> selectedHousekeepers,
                                                    int[] workloadPerEmployee) {
 
-
-        ArrayList<ArrayList<Room>> roomArrangement = new ArrayList<>(maidList.size());
+        ArrayList<ArrayList<Room>> roomArrangement = new ArrayList<>(selectedHousekeepers.size());
         var values = RoomType.values();
         int bedPool = Arrays.stream(workloadPerEmployee).sum();
         var roomQuantity = new int[values.length];
         var workloadPerRoom = new int[values.length];
 
-        initializeArrays(selectedRooms, maidList.size(), roomArrangement, values,
+        initializeArrays(selectedRooms, selectedHousekeepers.size(), roomArrangement, values,
                 roomQuantity, workloadPerRoom);
 
-        bedPool = assignORoomIfExists(selectedRooms, workloadPerEmployee, bedPool,
+        bedPool = assignORoomIfExists(selectedRooms, selectedHousekeepers, workloadPerEmployee, bedPool,
                 roomQuantity, workloadPerRoom, values, roomArrangement);
 
-        bedPool = assignRoomsEquallyIfLessThanSixRoomsOccupied(selectedRooms, maidList, roomQuantity,
+        bedPool = assignRoomsEquallyIfLessThanSixRoomsOccupied(selectedRooms, selectedHousekeepers, roomQuantity,
                 roomArrangement, bedPool);
 
         int failSafe = 0;
@@ -407,35 +418,36 @@ public class MainController implements Initializable {
         while (bedPool > 0) {
 
             failSafe++;
-            if (failSafe == 50) {
-                throw new RuntimeException();
-            } else if (isLastWorkload(workloadPerEmployee)) {
+//            if (failSafe == 50) {
+//                throw new RuntimeException();
+//            } else
+            if (isLastWorkload(workloadPerEmployee)) {
 
                 bedPool = assignAllRemainingRooms(selectedRooms, workloadPerEmployee, roomArrangement);
 
             } else if (canWorkloadQuotaBeSatisfied(workloadPerEmployee, values, roomQuantity)) {
                 // This is actually safe
-                bedPool = processEntries(selectedRooms, workloadPerEmployee, employeeIndex,
+                bedPool = processEntries(selectedRooms, selectedHousekeepers, workloadPerEmployee, employeeIndex,
                         indexRoomQuota, bedPool, roomQuantity,
                         workloadPerRoom, values, roomArrangement);
 
             } else if (oddNumberedWorkloadAmountExists(workloadPerEmployee, roomQuantity)) {
-                bedPool = getRidOfOddNumberedWorkloads(selectedRooms, workloadPerEmployee, bedPool,
+                bedPool = getRidOfOddNumberedWorkloads(selectedRooms, selectedHousekeepers, workloadPerEmployee, bedPool,
                         roomQuantity, workloadPerRoom, values, roomArrangement);
 
             } else if (failSafe > 15 || stalemateReached(workloadPerEmployee, roomQuantity)) {
 
                 while (bedPool != 0) {
-                    bedPool = processEntriesUnchecked(selectedRooms, workloadPerEmployee,
+                    bedPool = processEntriesUnchecked(selectedRooms, selectedHousekeepers, workloadPerEmployee,
                             indexOfNonZeroItem(workloadPerEmployee), indexOfNonZeroItem(roomQuantity),
                             bedPool, roomQuantity, workloadPerRoom, values, roomArrangement);
                 }
             } else if (!isThereSixInArray(workloadPerEmployee, roomQuantity)) {
-                bedPool = assignRoomsEqually(selectedRooms, workloadPerEmployee, roomQuantity, bedPool, workloadPerRoom, values, roomArrangement);
+                bedPool = assignRoomsEqually(selectedRooms, selectedHousekeepers, workloadPerEmployee, roomQuantity, bedPool, workloadPerRoom, values, roomArrangement);
 
             } else if (shouldAssignTwoRooms(workloadPerEmployee, roomQuantity, values)) {
 
-                bedPool = assignTwoRooms(selectedRooms, workloadPerEmployee,
+                bedPool = assignTwoRooms(selectedRooms, selectedHousekeepers, workloadPerEmployee,
                         workloadPerRoom, bedPool, roomQuantity, values, roomArrangement);
             }
 
@@ -474,7 +486,7 @@ public class MainController implements Initializable {
      * @param roomArrangement     the arrayList where each distribution is allocated
      * @return the remaining bedPool
      */
-    private int assignRoomsEqually(ArrayList<Room> selectedRooms, int[] workloadPerEmployee, int[] roomQuantity,
+    private int assignRoomsEqually(ArrayList<Room> selectedRooms, ObservableList<Housekeeper> selectedHousekeepers, int[] workloadPerEmployee, int[] roomQuantity,
                                    int bedPool, int[] workloadPerRoom, RoomType[] roomTypes,
                                    ArrayList<ArrayList<Room>> roomArrangement) {
 
@@ -489,7 +501,7 @@ public class MainController implements Initializable {
 
             for (int i = 0; i < workloadPerEmployee.length; i++) {
                 // The shift for each employee is reduced by the shift value associated with the room type
-                bedPool = processEntries(selectedRooms, workloadPerEmployee, i, maxIndex,
+                bedPool = processEntries(selectedRooms, selectedHousekeepers, workloadPerEmployee, i, maxIndex,
                         bedPool, roomQuantity, workloadPerRoom, roomTypes, roomArrangement);
 
             }
@@ -559,9 +571,17 @@ public class MainController implements Initializable {
      * @return true if it is impossible to assign the remaining rooms equally, false if not
      */
     private boolean stalemateReached(int[] workloadPerEmployee, int[] roomQuantity) {
-        int[] roomQuantityWithNoZeros = Arrays.stream(roomQuantity).filter(value -> value != 0).toArray();
+
+        int[] roomQuantityWithNoZeros = Arrays
+                .stream(roomQuantity)
+                .filter(value -> value != 0)
+                .toArray();
         boolean oneTypeOfRoomLeft = roomQuantityWithNoZeros.length == 1;
-        int housekeepersLeft = Arrays.stream(workloadPerEmployee).filter(value -> value != 0).toArray().length;
+
+        int housekeepersLeft = Arrays
+                .stream(workloadPerEmployee)
+                .filter(value -> value != 0)
+                .toArray().length;
 
         if (oneTypeOfRoomLeft) {
             return roomQuantityWithNoZeros[0] % housekeepersLeft != 0;
@@ -584,7 +604,8 @@ public class MainController implements Initializable {
      * @param roomArrangement     the arrayList where each distribution is allocated
      * @return the remaining bedPool
      */
-    private int getRidOfOddNumberedWorkloads(ArrayList<Room> selectedRooms, int[] workloadPerEmployee, int bedPool,
+    private int getRidOfOddNumberedWorkloads(ArrayList<Room> selectedRooms, ObservableList<Housekeeper> selectedHousekeepers,
+                                             int[] workloadPerEmployee, int bedPool,
                                              int[] roomQuantity, int[] workloadPerRoom,
                                              RoomType[] roomTypes, ArrayList<ArrayList<Room>> roomArrangement) {
 
@@ -592,7 +613,7 @@ public class MainController implements Initializable {
         for (int i = 0; i < workloadPerEmployee.length; i++) {
 
             if (workloadPerEmployee[i] % 2 != 0 && roomQuantity[2] > 0) {
-                bedPool = processEntries(selectedRooms, workloadPerEmployee, i, 2,
+                bedPool = processEntries(selectedRooms, selectedHousekeepers, workloadPerEmployee, i, 2,
                         bedPool, roomQuantity, workloadPerRoom, roomTypes, roomArrangement);
             }
 
@@ -614,7 +635,8 @@ public class MainController implements Initializable {
      * @param roomArrangement     the arrayList where each distribution is allocated
      * @return the remaining bedPool
      */
-    private int assignTwoRooms(ArrayList<Room> selectedRooms, int[] workloadPerEmployee,
+    private int assignTwoRooms(ArrayList<Room> selectedRooms, ObservableList<Housekeeper> selectedHousekeepers,
+                               int[] workloadPerEmployee,
                                int[] workloadPerRoom, int bedPool, int[] roomQuantity,
                                RoomType[] roomTypes, ArrayList<ArrayList<Room>> roomArrangement) {
         // Begin by iterating over all the employees
@@ -631,7 +653,7 @@ public class MainController implements Initializable {
                         */
                         if (workloadPerEmployee[i] - roomTypes[j].getValue() * 2 == 0) {
                             for (int l = 0; l < 2; l++) {
-                                bedPool = processEntries(selectedRooms, workloadPerEmployee, i,
+                                bedPool = processEntries(selectedRooms, selectedHousekeepers, workloadPerEmployee, i,
                                         j, bedPool, roomQuantity, workloadPerRoom,
                                         roomTypes, roomArrangement);
                             }
@@ -653,7 +675,7 @@ public class MainController implements Initializable {
                                 workloadPerEmployee[i] - roomTypes[j].getValue() * 2 - roomTypes[k].getValue() == 0) {
 
                                 for (int l = 0; l < 2; l++) {
-                                    bedPool = processEntries(selectedRooms, workloadPerEmployee, i,
+                                    bedPool = processEntries(selectedRooms, selectedHousekeepers, workloadPerEmployee, i,
                                             j, bedPool, roomQuantity, workloadPerRoom,
                                             roomTypes, roomArrangement);
                                 }
@@ -679,38 +701,59 @@ public class MainController implements Initializable {
      * @return true if two rooms should be assigned, false if not
      */
     private boolean shouldAssignTwoRooms(int[] workloadPerEmployee, int[] roomQuantity, RoomType[] roomTypes) {
-        for (int workload : workloadPerEmployee) {
-            if (workload > 0) {
-                // For the first roomType shift to be evaluated (which would correspond to the type of room to be assigned twice)
-                for (int j = 0; j < roomTypes.length; j++) {
-                    if (roomQuantity[j] >= 2) {
-                        /*
-                        If two rooms of the same type can be assigned to complete the required workload for
-                        the i employee, assign them and return the new bedPool
-                        */
-                        if (workload - roomTypes[j].getValue() * 2 == 0) {
-                            return true;
-                        }
-                        /*
-                        Else, if the previous condition was false, evaluate if two j rooms minus one room of
-                        a different type (k) can complete employee[i]'s workload.
-                        Just like the previous case, only two j rooms will be assigned if the condition is met.
-                        k will be assigned by canWorkloadBeSatisfied() in the next iteration.
-                        */
-                        for (int k = 0; k < roomTypes.length; k++) {
 
-                            if (roomQuantity[k] > 0
-                                && roomTypes[j].getValue() != roomTypes[k].getValue()
-                                && workload - roomTypes[j].getValue() * 2 - roomTypes[k].getValue() == 0) {
-                                return true;
-                            }
+        return Arrays.stream(workloadPerEmployee)
+                .anyMatch(workload -> workload > 0 &&
+                                      // For the first roomType shift to be evaluated (which would correspond to the type of room to be assigned twice)
+                                      IntStream.range(0, roomTypes.length)
+                                              /*
+                                              If two rooms of the same type can be assigned to complete the required workload for
+                                              the i employee, assign them and return the new bedPool
+                                              */
+                                              .filter(roomIndex -> roomQuantity[roomIndex] >= 2)
+                                              .anyMatch(roomIndex -> {
+                                                  if (workload - roomTypes[roomIndex].getValue() * 2 == 0) {
+                                                      return true;
+                                                  } else {
+                                                      return IntStream.range(0, roomTypes.length)
+                                                              .filter(parallelRoomIndex -> roomQuantity[parallelRoomIndex] > 0 &&
+                                                                                           roomTypes[roomIndex].getValue() != roomTypes[parallelRoomIndex].getValue())
+                                                              .anyMatch(parallelRoomIndex -> workload - roomTypes[roomIndex].getValue() * 2 - roomTypes[parallelRoomIndex].getValue() == 0);
+                                                  }
+                                              }));
 
-                        }
-                    }
-                }
-            }
-        }
-        return false;
+//        for (int workload : workloadPerEmployee) {
+//            if (workload > 0) {
+//                // For the first roomType shift to be evaluated (which would correspond to the type of room to be assigned twice)
+//                for (int j = 0; j < roomTypes.length; j++) {
+//                    if (roomQuantity[j] >= 2) {
+//                        /*
+//                        If two rooms of the same type can be assigned to complete the required workload for
+//                        the i employee, assign them and return the new bedPool
+//                        */
+//                        if (workload - roomTypes[j].getValue() * 2 == 0) {
+//                            return true;
+//                        }
+//                        /*
+//                        Else, if the previous condition was false, evaluate if two j rooms minus one room of
+//                        a different type (k) can complete employee[i]'s workload.
+//                        Just like the previous case, only two j rooms will be assigned if the condition is met.
+//                        k will be assigned by canWorkloadBeSatisfied() in the next iteration.
+//                        */
+//                        for (int k = 0; k < roomTypes.length; k++) {
+//
+//                            if (roomQuantity[k] > 0
+//                                && roomTypes[j].getValue() != roomTypes[k].getValue()
+//                                && workload - roomTypes[j].getValue() * 2 - roomTypes[k].getValue() == 0) {
+//                                return true;
+//                            }
+//
+//                        }
+//                    }
+//                }
+//            }
+//        }
+//        return false;
     }
 
     /**
@@ -726,7 +769,8 @@ public class MainController implements Initializable {
      * @param roomArrangement     the arrayList where each distribution is allocated
      * @return the remaining bedPool
      */
-    private int assignORoomIfExists(ArrayList<Room> originalRooms, int[] workloadPerEmployee,
+    private int assignORoomIfExists(ArrayList<Room> originalRooms, ObservableList<Housekeeper> selectedHousekeepers,
+                                    int[] workloadPerEmployee,
                                     int bedPool, int[] roomQuantity, int[] workloadPerRoom,
                                     RoomType[] roomTypes, ArrayList<ArrayList<Room>> roomArrangement) {
 
@@ -734,7 +778,7 @@ public class MainController implements Initializable {
             int[] largestQuantityWIndex = findOddMaxNumberWIndex(workloadPerEmployee);
 
             if (largestQuantityWIndex[0] > 0) {
-                return processEntries(originalRooms, workloadPerEmployee, largestQuantityWIndex[1],
+                return processEntries(originalRooms, selectedHousekeepers, workloadPerEmployee, largestQuantityWIndex[1],
                         1, bedPool, roomQuantity, workloadPerRoom, roomTypes, roomArrangement);
 
             }
@@ -752,15 +796,9 @@ public class MainController implements Initializable {
      */
     private boolean oddNumberedWorkloadAmountExists(int[] workloadPerEmployee, int[] roomQuantity) {
 
-        int oddWL = 0;
-
-        for (int workload : workloadPerEmployee) {
-            if (workload % 2 != 0) {
-                oddWL++;
-            }
-        }
-
-        return oddWL > 0 && roomQuantity[2] > 0;
+        return Arrays.stream(workloadPerEmployee)
+                       .anyMatch(workload -> workload % 2 != 0)
+               && roomQuantity[2] > 0;
 
     }
 
@@ -769,7 +807,7 @@ public class MainController implements Initializable {
      * The workload of the current employee is not 0.
      * Assigning a room would complete its work quota, or it would result in it being greater than 1.
      *
-     * @param originalRooms       the rooms to work with
+     * @param selectedRooms       the rooms to work with
      * @param workloadPerEmployee the remaining work quota each employee has to meet
      * @param employeeIndex       the index of the employee in workloadPerEmployee
      * @param roomIndex           the index of the room in roomQuantity, workloadPerRoom and roomTypes
@@ -780,14 +818,15 @@ public class MainController implements Initializable {
      * @param roomArrangement     the arrayList where each distribution is allocated
      * @return the remaining bedPool
      */
-    private int processEntries(ArrayList<Room> originalRooms, int[] workloadPerEmployee, int employeeIndex,
+    private int processEntries(ArrayList<Room> selectedRooms, ObservableList<Housekeeper> selectedHousekeepers, int[] workloadPerEmployee, int employeeIndex,
                                int roomIndex, int bedPool, int[] roomQuantity,
                                int[] workloadPerRoom, RoomType[] roomTypes, ArrayList<ArrayList<Room>> roomArrangement) {
 
         if (workloadPerEmployee[employeeIndex] != 0 &&
             (workloadPerEmployee[employeeIndex] - roomTypes[roomIndex].getValue() == 0 || workloadPerEmployee[employeeIndex] - roomTypes[roomIndex].getValue() > 1)) {
 
-            bedPool = assignRoom(originalRooms, workloadPerEmployee, employeeIndex, roomIndex, bedPool, roomQuantity, workloadPerRoom, roomTypes, roomArrangement);
+            bedPool = assignRoom(selectedRooms, selectedHousekeepers, workloadPerEmployee,
+                    employeeIndex, roomIndex, bedPool, roomQuantity, workloadPerRoom, roomTypes, roomArrangement);
         }
 
         return bedPool;
@@ -814,7 +853,7 @@ public class MainController implements Initializable {
      * @param roomArrangement     the arrayList where each distribution is allocated
      * @return the remaining bedPool
      */
-    private int assignRoom(ArrayList<Room> originalRooms, int[] workloadPerEmployee, int employeeIndex,
+    private int assignRoom(ArrayList<Room> originalRooms, ObservableList<Housekeeper> selectedHousekeepers, int[] workloadPerEmployee, int employeeIndex,
                            int roomIndex, int bedPool, int[] roomQuantity,
                            int[] workloadPerRoom, RoomType[] roomTypes, ArrayList<ArrayList<Room>> roomArrangement) {
 
@@ -843,12 +882,12 @@ public class MainController implements Initializable {
      * @param roomArrangement     the arrayList where each distribution is allocated
      * @return the remaining bedPool
      */
-    private int processEntriesUnchecked(ArrayList<Room> originalRooms, int[] workloadPerEmployee, int employeeIndex,
+    private int processEntriesUnchecked(ArrayList<Room> originalRooms, ObservableList<Housekeeper> selectedHousekeepers, int[] workloadPerEmployee, int employeeIndex,
                                         int roomIndex, int bedPool, int[] roomQuantity,
                                         int[] workloadPerRoom, RoomType[] values, ArrayList<ArrayList<Room>> roomArrangement) {
 
         if (workloadPerEmployee[employeeIndex] >= 0) {
-            bedPool = assignRoom(originalRooms, workloadPerEmployee, employeeIndex, roomIndex,
+            bedPool = assignRoom(originalRooms, selectedHousekeepers, workloadPerEmployee, employeeIndex, roomIndex,
                     bedPool, roomQuantity, workloadPerRoom, values, roomArrangement);
         }
         return bedPool;
@@ -963,16 +1002,10 @@ public class MainController implements Initializable {
      * @return true if there is a six and two or more MA rooms.
      */
     private boolean isThereSixInArray(int[] workloadPerEmployee, int[] roomQuantity) {
-        boolean foundSix = false;
 
-        for (int j : workloadPerEmployee) {
-            if (j == 6) {
-                foundSix = true;
-                break;
-            }
-        }
-
-        return foundSix && roomQuantity[2] >= 2;
+        return Arrays.stream(workloadPerEmployee)
+                       .anyMatch(value -> value == 6)
+               && roomQuantity[2] >= 2;
     }
 
     /**
@@ -1068,7 +1101,7 @@ public class MainController implements Initializable {
         return filteredRoom
                 .stream()
                 .filter(room -> String.valueOf(room.id()).substring(0, 1).equals(preferredFloor))
-                .findFirst()
+                .findAny()
                 .orElse(null);
     }
 
@@ -1080,16 +1113,7 @@ public class MainController implements Initializable {
      * @return the amount of rooms
      */
     private int getQuantityOfRoomType(ArrayList<Room> rooms, RoomType roomType) {
-
-        int quantity = 0;
-
-        for (var room : rooms) {
-            if (room.roomType().equals(roomType)) {
-                quantity++;
-            }
-        }
-
-        return quantity;
+        return (int) rooms.stream().filter(room -> room.roomType().equals(roomType)).count();
     }
 
     /**
@@ -1154,21 +1178,37 @@ public class MainController implements Initializable {
 
         for (int i = 0; i < employeeRooms.size(); i++) {
 
-            List<String> rooms = new ArrayList<>();
-            for (var room : employeeRooms.get(i)) {
-                rooms.add(String.valueOf(room.id()));
-            }
+            List<String> roomIds = employeeRooms.get(i)
+                    .stream()
+                    .map(room -> String.valueOf(room.id()))
+                    .toList();
 
             for (var room : roomsPane.getChildren()) {
                 if (room instanceof CheckBox checkBox) {
                     String id = checkBox.getText().split(" ")[0];
-                    if (rooms.contains(id)) {
+                    if (roomIds.contains(id)) {
                         checkBox.setStyle("-fx-background-color: " + toRGBCode(Color.valueOf(housekeepers.get(i).preferredColor())) + ";");
                     }
                 }
             }
 
         }
+
+//        employeeRooms.forEach(roomsArrangement -> {
+//            List<String> roomIds = roomsArrangement
+//                    .stream()
+//                    .map(room -> String.valueOf(room.id()))
+//                    .toList();
+//
+//            roomsPane.getChildren()
+//                    .stream()
+//                    .filter(node -> node instanceof CheckBox checkBox && roomIds.contains(checkBox.getText().split(" ")[0]))
+//                    .forEach(node -> {
+//                        int employeeIndex = employeeRooms.indexOf(roomsArrangement);
+//                        String preferredColor = housekeepers.get(employeeIndex).preferredColor();
+//                        node.setStyle("-fx-background-color: " + toRGBCode(Color.valueOf(preferredColor)) + ";");
+//                    });
+//        });
 
     }
 
@@ -1195,7 +1235,7 @@ public class MainController implements Initializable {
      * @param selectedRooms The list of rooms from which workload is to be distributed.
      * @return An array representing the workload distribution among housekeepers.
      */
-    private int[] distributeWorkload(ArrayList<Room> selectedRooms) {
+    private int[] distributeWorkload(ArrayList<Room> selectedRooms, ObservableList<Housekeeper> selectedHousekeepers) {
 
         int workload = getTotalWorkload(selectedRooms);
 
@@ -1279,15 +1319,14 @@ public class MainController implements Initializable {
      * @return int[] number of part-time and full time housekeepers
      */
     private int[] getMaidDistribution(ObservableList<Housekeeper> houseKeeperArray) {
-        int partTimeM = 0;
-        int fullTimeM = 0;
 
-        for (var h : houseKeeperArray) {
-            switch (h.shift()) {
-                case Shift.FULL_TIME -> fullTimeM++;
-                case Shift.PART_TIME -> partTimeM++;
-            }
-        }
+        Map<Shift, Integer> shiftCounts = houseKeeperArray
+                .stream()
+                // Sum 1 for each type of shift
+                .collect(Collectors.groupingBy(Housekeeper::shift, Collectors.summingInt(housekeeper -> 1)));
+
+        int partTimeM = shiftCounts.getOrDefault(Shift.PART_TIME, 0);
+        int fullTimeM = shiftCounts.getOrDefault(Shift.FULL_TIME, 0);
 
         return new int[]{partTimeM, fullTimeM};
     }

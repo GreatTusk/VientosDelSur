@@ -37,11 +37,9 @@ public class StaffRegistration implements Initializable {
     @FXML
     private ColorPicker colorHousekeeper;
     private ObservableList<Housekeeper> housekeepers;
-    private Json json;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
-        json = new Json();
         populateFloorsCbox();
 
     }

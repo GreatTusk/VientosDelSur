@@ -59,6 +59,13 @@
             <version>2.10.1</version>
             <type>jar</type>
         </dependency>
+
+        <dependency>
+            <groupId>io.github.fvarrui</groupId>
+            <artifactId>javapackager</artifactId>
+            <version>1.7.5</version>
+        </dependency>
+
     </dependencies>
 
     <build>
@@ -88,6 +95,25 @@
                             <noManPages>true</noManPages>
                             <stripDebug>true</stripDebug>
                             <noHeaderFiles>true</noHeaderFiles>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>io.github.fvarrui</groupId>
+                <artifactId>javapackager</artifactId>
+                <version>1.7.5</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>package</goal>
+                        </goals>
+                        <configuration>
+                            <copyDependencies>false</copyDependencies>
+                            <mainClass>com.vientosdelsur.main.Main</mainClass>
+                            <bundleJre>true</bundleJre>
+                            <jrePath>C:\Users\F776\IdeaProjects\VientosDelSur\target\app</jrePath>
                         </configuration>
                     </execution>
                 </executions>

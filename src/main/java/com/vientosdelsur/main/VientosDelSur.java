@@ -28,7 +28,7 @@ public class VientosDelSur extends Application {
         Parent root = fxmlLoader.load();
         var scene = new Scene(root);
         scene.getStylesheets().add(Objects.requireNonNull(getClass().getResource("/com/vientosdelsur/css/mainController.css")).toExternalForm());
-        MainController mainController = fxmlLoader.getController();
+//        MainController mainController = fxmlLoader.getController();
         stage.setMinHeight(750);
         stage.setMinWidth(860);
         stage.setTitle("Vientos del Sur");
